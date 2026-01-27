@@ -68,11 +68,11 @@ export default function Pricing({ user, products, subscription }: Props) {
       setPriceIdLoading(undefined);
       return router.push(
         getErrorRedirect(
-          currentPath,
-          'An unknown error occurred.',
-          'Please try again later or contact a system administrator.'
-        )
-      );
+        currentPath || '/',
+        'An unknown error occurred.',
+        'Please try again later or contact a system administrator.'
+    )
+    );
     }
 
     const stripe = await getStripe();

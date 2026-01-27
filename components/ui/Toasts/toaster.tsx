@@ -19,10 +19,12 @@ export function Toaster() {
   const router = useRouter();
 
   useEffect(() => {
-    const status = searchParams.get('status');
-    const status_description = searchParams.get('status_description');
-    const error = searchParams.get('error');
-    const error_description = searchParams.get('error_description');
+    if (!searchParams) return;
+
+      const status = searchParams.get('status');
+      const status_description = searchParams.get('status_description');
+      const error = searchParams.get('error');
+      const error_description = searchParams.get('error_description');
     if (error || status) {
       toast({
         title: error

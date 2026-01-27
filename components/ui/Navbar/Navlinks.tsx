@@ -36,7 +36,7 @@ export default function Navlinks({ user }: NavlinksProps) {
       <div className="flex justify-end space-x-8">
         {user ? (
           <form onSubmit={(e) => handleRequest(e, SignOut, router)}>
-            <input type="hidden" name="pathName" value={pathname} />
+            <input type="hidden" name="pathName" value={pathname || "/"} />
             <button type="submit" className={s.link}>
               Sign out
             </button>

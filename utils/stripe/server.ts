@@ -81,12 +81,6 @@ export async function checkoutWithStripe(
   cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}${redirectPath}?status=cancelled`
 };
 
-    } else if (price.type === 'one_time') {
-      params = {
-        ...params,
-        mode: 'payment'
-      };
-    }
 
     // Create a checkout session in Stripe
     let session;

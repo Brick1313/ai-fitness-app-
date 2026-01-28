@@ -16,7 +16,7 @@ interface Plan {
   name: string;
   description: string;
   priceId: string;
-  amount: number;
+  amount: number;      // amount in cents
   currency: string;
   interval: 'month' | 'year' | 'lifetime';
 }
@@ -30,13 +30,11 @@ type BillingInterval = 'month' | 'year' | 'lifetime';
 export default function Pricing({ user }: Props) {
   const router = useRouter();
   const pathname = usePathname() || '/';
-
   const [plans, setPlans] = useState<Plan[]>([]);
   const [loading, setLoading] = useState(true);
   const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
   const [priceIdLoading, setPriceIdLoading] = useState<string | null>(null);
 
-  // Extract available intervals from plans
   const intervals = Array.from(new Set(plans.map((p) => p.interval)));
 
   // Fetch plans from API
@@ -65,7 +63,10 @@ export default function Pricing({ user }: Props) {
       return;
     }
 
-    const { errorRedirect, sessionId } = await checkoutWithStripe(plan.priceId, pathname);
+    const { errorRedirect, sessionId } = await checkoutWithStripe(
+      plan.priceId,
+      pathname
+    );
 
     if (errorRedirect) {
       setPriceIdLoading(null);
@@ -130,7 +131,9 @@ export default function Pricing({ user }: Props) {
     <section className="bg-black py-24">
       <div className="max-w-6xl mx-auto px-4">
         <div className="text-center mb-12">
-          <h1 className="text-4xl sm:text-6xl font-extrabold text-white">Pricing Plans</h1>
+          <h1 className="text-4xl sm:text-6xl font-extrabold text-white">
+            Pricing Plans
+          </h1>
           <p className="mt-4 text-zinc-300 text-lg sm:text-xl">
             Choose a subscription plan that works for you.
           </p>
@@ -171,14 +174,15 @@ export default function Pricing({ user }: Props) {
           {plans
             .filter((p) => p.interval === billingInterval)
             .map((plan) => {
-              const priceAmount = plan.amount ?? 0;
-              const priceCurrency = plan.currency ?? 'USD';
+              // Convert cents to dollars
+              const priceAmount = plan.amount / 100;
+              const priceCurrency = plan.currency.toUpperCase();
 
               const priceString = new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: priceCurrency,
-                minimumFractionDigits: 0
-              }).format(priceAmount / 100);
+                minimumFractionDigits: 0,
+              }).format(priceAmount);
 
               return (
                 <div
@@ -190,7 +194,9 @@ export default function Pricing({ user }: Props) {
                     <p className="mt-4 text-zinc-300">{plan.description}</p>
                     <p className="mt-8">
                       <span className="text-5xl font-extrabold text-white">{priceString}</span>
-                      <span className="text-base font-medium text-zinc-100">/{billingInterval}</span>
+                      <span className="text-base font-medium text-zinc-100">
+                        /{billingInterval}
+                      </span>
                     </p>
                     <Button
                       variant="slim"

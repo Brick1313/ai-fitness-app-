@@ -69,18 +69,18 @@ export async function checkoutWithStripe(
       success_url: getURL(redirectPath)
     };
 
-    console.log(
-      'Trial end:',
-      calculateTrialEndUnixTimestamp(price.trial_period_days)
-    );
-    if (price.type === 'recurring') {
-      params = {
-        ...params,
-        mode: 'subscription',
-        subscription_data: {
-          trial_end: calculateTrialEndUnixTimestamp(price.trial_period_days)
-        }
-      };
+    params = {
+  mode: 'subscription',
+  line_items: [
+    {
+      price: priceId,
+      quantity: 1
+    }
+  ],
+  success_url: `${process.env.NEXT_PUBLIC_SITE_URL}${redirectPath}?status=success`,
+  cancel_url: `${process.env.NEXT_PUBLIC_SITE_URL}${redirectPath}?status=cancelled`
+};
+
     } else if (price.type === 'one_time') {
       params = {
         ...params,

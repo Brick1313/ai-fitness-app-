@@ -175,11 +175,14 @@ Yearly
 {plans
 .filter((p) => p.interval === billingInterval)
 .map((plan) => {
+const priceAmount = price?.unit_amount ?? 0; // fallback to 0 if missing
+const priceCurrency = price?.currency ?? 'USD'; // fallback to USD if missing
+
 const priceString = new Intl.NumberFormat('en-US', {
-style: 'currency',
-currency: plan.currency,
-minimumFractionDigits: 0
-}).format(plan.amount / 100);
+  style: 'currency',
+  currency: priceCurrency,
+  minimumFractionDigits: 0
+}).format(priceAmount / 100);
 
 return (
 <div

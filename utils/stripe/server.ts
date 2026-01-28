@@ -19,9 +19,10 @@ type CheckoutResponse = {
 };
 
 export async function checkoutWithStripe(
-  price: Price,
+  priceId: string,
   redirectPath: string = '/account'
 ): Promise<CheckoutResponse> {
+
   try {
     if (!stripe) {
       throw new Error('Stripe is not configured. Please set STRIPE_SECRET_KEY environment variable.');
@@ -58,12 +59,12 @@ export async function checkoutWithStripe(
       customer_update: {
         address: 'auto'
       },
-      line_items: [
-        {
-          price: price.id,
-          quantity: 1
-        }
-      ],
+     line_items: [
+  {
+    price: priceId,
+    quantity: 1
+  }
+],
       cancel_url: getURL(),
       success_url: getURL(redirectPath)
     };

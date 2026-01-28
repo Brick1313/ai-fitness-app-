@@ -10,15 +10,15 @@ import { getErrorRedirect } from '@/utils/helpers';
 import { User } from '@supabase/supabase-js';
 import cn from 'classnames';
 
-// Fully typed Stripe plan
-interface StripePlan {
-id: string; // Plan ID in your system
-name: string; // Plan name (e.g., "Freelancer")
-description: string; // Description
-amount: number; // Price in cents
-currency: string; // Currency code
-interval: 'month' | 'year' | 'lifetime'; // Billing interval
-priceId: string; // Stripe price ID
+// Properly typed plan
+interface Plan {
+id: string;
+name: string;
+description: string;
+priceId: string;
+amount: number;
+currency: string;
+interval: 'month' | 'year' | 'lifetime';
 }
 
 interface Props {
@@ -30,30 +30,31 @@ type BillingInterval = 'month' | 'year' | 'lifetime';
 export default function Pricing({ user }: Props) {
 const router = useRouter();
 const pathname = usePathname() || '/';
-const [plans, setPlans] = useState<StripePlan[]>([]);
+const [plans, setPlans] = useState<Plan[]>([]);
 const [loading, setLoading] = useState(true);
 const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
 const [priceIdLoading, setPriceIdLoading] = useState<string | null>(null);
 
 const intervals = Array.from(new Set(plans.map((p) => p.interval)));
 
-// Fetch plans from API
+// Fetch plans safely
 useEffect(() => {
-const fetchPlans = async () => {
+async function fetchPlans() {
 try {
 const res = await fetch('/api/getPlans');
-const data: StripePlan[] = await res.json();
+const data: Plan[] = await res.json();
 setPlans(data);
 } catch (err) {
 console.error('Failed to fetch plans', err);
 } finally {
 setLoading(false);
 }
-};
+}
 fetchPlans();
 }, []);
 
-const handleStripeCheckout = async (plan: StripePlan) => {
+// Stripe checkout handler
+const handleStripeCheckout = async (plan: Plan) => {
 setPriceIdLoading(plan.id);
 
 if (!user) {
@@ -90,6 +91,7 @@ stripe?.redirectToCheckout({ sessionId });
 setPriceIdLoading(null);
 };
 
+// Loading state
 if (loading) {
 return (
 <section className="bg-black py-24">
@@ -100,6 +102,7 @@ return (
 );
 }
 
+// No plans found
 if (!plans.length) {
 return (
 <section className="bg-black py-24">
@@ -123,6 +126,7 @@ Stripe Dashboard
 );
 }
 
+// Render plans
 return (
 <section className="bg-black py-24">
 <div className="max-w-6xl mx-auto px-4">

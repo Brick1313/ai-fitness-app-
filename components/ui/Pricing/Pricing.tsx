@@ -64,9 +64,10 @@ return;
 }
 
 const { errorRedirect, sessionId } = await checkoutWithStripe(
-{ id: plan.priceId },
-pathname
+  plan.priceId,
+  pathname ?? '/'
 );
+
 
 if (errorRedirect) {
 setPriceIdLoading(null);

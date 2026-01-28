@@ -1,5 +1,7 @@
 'use client';
 
+import { useState, useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import Button from '@/components/ui/Button';
 import LogoCloud from '@/components/ui/LogoCloud';
 import { getStripe } from '@/utils/stripe/client';
@@ -7,42 +9,40 @@ import { checkoutWithStripe } from '@/utils/stripe/server';
 import { getErrorRedirect } from '@/utils/helpers';
 import { User } from '@supabase/supabase-js';
 import cn from 'classnames';
-import { useRouter, usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
 
-// Define proper StripePlan type
+// Fully typed Stripe plan
 interface StripePlan {
-id: string;
-name: string;
-description: string;
-amount: number;
-currency: string;
-interval: 'month' | 'year' | 'lifetime';
-priceId: string;
+id: string; // Plan ID in your system
+name: string; // Plan name (e.g., "Freelancer")
+description: string; // Description
+amount: number; // Price in cents
+currency: string; // Currency code
+interval: 'month' | 'year' | 'lifetime'; // Billing interval
+priceId: string; // Stripe price ID
 }
 
 interface Props {
-user: User | null | undefined;
+user: User | null;
 }
 
-type BillingInterval = 'lifetime' | 'year' | 'month';
+type BillingInterval = 'month' | 'year' | 'lifetime';
 
 export default function Pricing({ user }: Props) {
 const router = useRouter();
+const pathname = usePathname() || '/';
 const [plans, setPlans] = useState<StripePlan[]>([]);
 const [loading, setLoading] = useState(true);
-const [billingInterval, setBillingInterval] =
-useState<BillingInterval>('month');
-const [priceIdLoading, setPriceIdLoading] = useState<string>();
-const currentPath = usePathname() || '/';
+const [billingInterval, setBillingInterval] = useState<BillingInterval>('month');
+const [priceIdLoading, setPriceIdLoading] = useState<string | null>(null);
 
-const intervals = Array.from(new Set(plans.map((plan) => plan.interval)));
+const intervals = Array.from(new Set(plans.map((p) => p.interval)));
 
+// Fetch plans from API
 useEffect(() => {
 const fetchPlans = async () => {
 try {
 const res = await fetch('/api/getPlans');
-const data = await res.json();
+const data: StripePlan[] = await res.json();
 setPlans(data);
 } catch (err) {
 console.error('Failed to fetch plans', err);
@@ -50,52 +50,51 @@ console.error('Failed to fetch plans', err);
 setLoading(false);
 }
 };
-
 fetchPlans();
 }, []);
 
-const handleStripeCheckout = async (price: { id: string }) => {
-setPriceIdLoading(price.id);
+const handleStripeCheckout = async (plan: StripePlan) => {
+setPriceIdLoading(plan.id);
 
 if (!user) {
-setPriceIdLoading(undefined);
-return router.push('/signin/signup');
+setPriceIdLoading(null);
+router.push('/signin/signup');
+return;
 }
 
 const { errorRedirect, sessionId } = await checkoutWithStripe(
-price,
-currentPath
+{ id: plan.priceId },
+pathname
 );
 
 if (errorRedirect) {
-setPriceIdLoading(undefined);
-return router.push(errorRedirect);
+setPriceIdLoading(null);
+router.push(errorRedirect);
+return;
 }
 
 if (!sessionId) {
-setPriceIdLoading(undefined);
-return router.push(
+setPriceIdLoading(null);
+router.push(
 getErrorRedirect(
-currentPath,
+pathname,
 'An unknown error occurred.',
-'Please try again later or contact a system administrator.'
+'Please try again later or contact support.'
 )
 );
+return;
 }
 
 const stripe = await getStripe();
 stripe?.redirectToCheckout({ sessionId });
-
-setPriceIdLoading(undefined);
+setPriceIdLoading(null);
 };
 
 if (loading) {
 return (
-<section className="bg-black">
-<div className="max-w-6xl px-4 py-8 mx-auto sm:py-24 sm:px-6 lg:px-8">
-<p className="text-4xl font-extrabold text-white sm:text-center sm:text-6xl">
-Loading plans…
-</p>
+<section className="bg-black py-24">
+<div className="max-w-6xl mx-auto text-center">
+<h1 className="text-4xl text-white font-extrabold">Loading plans…</h1>
 </div>
 </section>
 );
@@ -103,10 +102,21 @@ Loading plans…
 
 if (!plans.length) {
 return (
-<section className="bg-black">
-<div className="max-w-6xl px-4 py-8 mx-auto sm:py-24 sm:px-6 lg:px-8">
-<p className="text-4xl font-extrabold text-white sm:text-center sm:text-6xl">
+<section className="bg-black py-24">
+<div className="max-w-6xl mx-auto text-center">
+<h1 className="text-4xl text-white font-extrabold">
 No subscription pricing plans found.
+</h1>
+<p className="mt-4 text-zinc-300">
+Create them in your{' '}
+<a
+href="https://dashboard.stripe.com/products"
+target="_blank"
+rel="noopener noreferrer"
+className="underline text-pink-500"
+>
+Stripe Dashboard
+</a>
 </p>
 </div>
 </section>
@@ -114,49 +124,51 @@ No subscription pricing plans found.
 }
 
 return (
-<section className="bg-black">
-<div className="max-w-6xl px-4 py-8 mx-auto sm:py-24 sm:px-6 lg:px-8">
-<div className="sm:flex sm:flex-col sm:align-center">
-<h1 className="text-4xl font-extrabold text-white sm:text-center sm:text-6xl">
+<section className="bg-black py-24">
+<div className="max-w-6xl mx-auto px-4">
+<div className="text-center mb-12">
+<h1 className="text-4xl sm:text-6xl font-extrabold text-white">
 Pricing Plans
 </h1>
-<p className="max-w-2xl m-auto mt-5 text-xl text-zinc-200 sm:text-center sm:text-2xl">
+<p className="mt-4 text-zinc-300 text-lg sm:text-xl">
 Choose a subscription plan that works for you.
 </p>
 </div>
 
-<div className="relative self-center mt-6 bg-zinc-900 rounded-lg p-0.5 flex sm:mt-8 border border-zinc-800">
+{/* Billing interval toggle */}
+<div className="flex justify-center mb-12 bg-zinc-900 rounded-lg p-1 border border-zinc-800">
 {intervals.includes('month') && (
 <button
 onClick={() => setBillingInterval('month')}
-type="button"
-className={`${
+className={cn(
+'rounded-md py-2 px-6 text-sm font-medium focus:outline-none',
 billingInterval === 'month'
-? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
-: 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
-} rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
+? 'bg-zinc-700 text-white shadow'
+: 'text-zinc-400'
+)}
 >
-Monthly billing
+Monthly
 </button>
 )}
 {intervals.includes('year') && (
 <button
 onClick={() => setBillingInterval('year')}
-type="button"
-className={`${
+className={cn(
+'rounded-md py-2 px-6 text-sm font-medium focus:outline-none',
 billingInterval === 'year'
-? 'relative w-1/2 bg-zinc-700 border-zinc-800 shadow-sm text-white'
-: 'ml-0.5 relative w-1/2 border border-transparent text-zinc-400'
-} rounded-md m-1 py-2 text-sm font-medium whitespace-nowrap focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-opacity-50 focus:z-10 sm:w-auto sm:px-8`}
+? 'bg-zinc-700 text-white shadow'
+: 'text-zinc-400'
+)}
 >
-Yearly billing
+Yearly
 </button>
 )}
 </div>
 
-<div className="mt-12 space-y-0 sm:mt-16 flex flex-wrap justify-center gap-6 lg:max-w-4xl lg:mx-auto xl:max-w-none xl:mx-0">
+{/* Plans */}
+<div className="flex flex-wrap justify-center gap-6">
 {plans
-.filter((plan) => plan.interval === billingInterval)
+.filter((p) => p.interval === billingInterval)
 .map((plan) => {
 const priceString = new Intl.NumberFormat('en-US', {
 style: 'currency',
@@ -167,32 +179,21 @@ minimumFractionDigits: 0
 return (
 <div
 key={plan.id}
-className={cn(
-'flex flex-col rounded-lg shadow-sm divide-y divide-zinc-600 bg-zinc-900',
-'flex-1 basis-1/3 max-w-xs'
-)}
+className="flex flex-col max-w-xs flex-1 bg-zinc-900 rounded-lg shadow-sm divide-y divide-zinc-600"
 >
 <div className="p-6">
-<h2 className="text-2xl font-semibold leading-6 text-white">
-{plan.name}
-</h2>
+<h2 className="text-2xl font-semibold text-white">{plan.name}</h2>
 <p className="mt-4 text-zinc-300">{plan.description}</p>
 <p className="mt-8">
-<span className="text-5xl font-extrabold text-white">
-{priceString}
-</span>
-<span className="text-base font-medium text-zinc-100">
-/{billingInterval}
-</span>
+<span className="text-5xl font-extrabold text-white">{priceString}</span>
+<span className="text-base font-medium text-zinc-100">/{billingInterval}</span>
 </p>
 <Button
 variant="slim"
 type="button"
-loading={priceIdLoading === plan.priceId}
-onClick={() =>
-handleStripeCheckout({ id: plan.priceId })
-}
-className="block w-full py-2 mt-8 text-sm font-semibold text-center text-white rounded-md hover:bg-zinc-900"
+loading={priceIdLoading === plan.id}
+onClick={() => handleStripeCheckout(plan)}
+className="w-full py-2 mt-8 text-sm font-semibold text-center text-white rounded-md hover:bg-zinc-900"
 >
 Subscribe
 </Button>
